@@ -1,0 +1,14 @@
+[Unit]
+Description=helm
+After=moonraker.service
+
+[Service]
+Environment=DISPLAY=:0.0
+ExecStart=/usr/bin/xinit /home/pi/helm/srv/helm.sh
+Type=simple
+Restart=on-abort
+RestartSec=15
+User=pi
+
+[Install]
+WantedBy=multi-user.target
