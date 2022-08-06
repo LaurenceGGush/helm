@@ -30,6 +30,8 @@ hdmi_cvt 800 480 60 6 0 0 0 0
 
 Configure the touchscreen for proper input, an example libinput file for an 800x480 touchscreen is in the srv directory and can be copied to /etc/X11/xorg.conf.d
 
+The display resolution and orientation can be set on line 4 of the service script file **~helm/srv/helm.sh**, DISPLAY and output should also be set correctly.
+
 ### Kiosk
 The app is run in chromium in kiosk mode, this provides a dedicated fullscreen experience.
 
