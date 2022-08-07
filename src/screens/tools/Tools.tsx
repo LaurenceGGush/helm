@@ -66,7 +66,7 @@ const Tools = () => {
 
 	const handleUpdateTool = useCallback(
 		(tool: number | undefined) => {
-			if (tool) {
+			if (typeof tool === "number") {
 				printer.tool(tool.toString())
 			} else {
 				printer.dropOffTool()
