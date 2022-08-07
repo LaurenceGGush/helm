@@ -60,7 +60,7 @@ const Printing: FC<BoxProps> = (props) => {
 						fontSize="3xl"
 						lineHeight="1.3"
 					>
-						{progress * 100}%
+						{(progress * 100).toFixed(1)}%
 					</Text>
 
 					<PlayPause>

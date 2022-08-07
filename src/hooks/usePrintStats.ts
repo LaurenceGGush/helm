@@ -13,8 +13,12 @@ const heightAtom = selectAtom(statusAtom, selectHeight)
 const selectDuration = (status: PrinterStatus) =>
 	status?.print_stats?.print_duration || 0
 const durationAtom = selectAtom(statusAtom, selectDuration)
-const selectProgress = (status: PrinterStatus) =>
-	status?.virtual_sdcard?.progress || 0
+const selectProgress = (status: PrinterStatus) => {
+	let progress = status?.virtual_sdcard?.progress || 0
+	progress = Math.round(progress * 1000) / 1000
+
+	return progress
+}
 const printStatsAtom = selectAtom(statusAtom, selectProgress)
 const usePrintStats = () => {
 	const printingOrPaused = usePrintingOrPaused()
