@@ -1,11 +1,10 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Box } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 
 import { useOutput } from "../../hooks/useOutput"
 import { colourModeRule } from "../../theme/colourMode"
-import { memoChecker } from "../../utilities/memoChecker"
 
 const Output = ({ isSelected }: { isSelected: boolean }) => {
 	const output = useOutput()
@@ -40,7 +39,10 @@ const Output = ({ isSelected }: { isSelected: boolean }) => {
 			const lastChild = ref.current?.lastElementChild
 			lastChild?.scrollIntoView()
 		}
-	}, [isSelected, scrolled])
+		if (!isSelected) {
+			setScrolled(false)
+		}
+	}, [isSelected, scrolled, output])
 
 	return (
 		<Box
@@ -102,4 +104,4 @@ const ResponseLine = styled.span`
 	display: block;
 `
 
-export default memo(Output, memoChecker)
+export default Output
