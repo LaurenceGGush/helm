@@ -252,7 +252,7 @@ export const gcodes = [
 		size: 8119878,
 	},
 	{
-		path: "propella.gcode",
+		path: "propellor.gcode",
 		modified: earlier,
 		size: 3264256,
 	},

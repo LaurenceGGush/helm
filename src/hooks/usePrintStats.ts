@@ -67,7 +67,7 @@ const usePrintStats = () => {
 
 	return {
 		filename,
-		freindlyname: friendlyName,
+		friendlyName,
 		thumb,
 		layers,
 		layer,

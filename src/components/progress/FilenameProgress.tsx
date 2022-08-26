@@ -11,7 +11,7 @@ import SimpleProgress from "./SimpleProgress"
  * Display file name and progress of current print
  */
 const FilenameProgress: FC<TagProps> = (props) => {
-	const { filename, freindlyname } = usePrintStats()
+	const { filename, friendlyName } = usePrintStats()
 
 	if (!filename) {
 		return null
@@ -19,7 +19,7 @@ const FilenameProgress: FC<TagProps> = (props) => {
 
 	return (
 		<FileName className="FilenameProgress" as="div" {...props}>
-			{freindlyname}
+			{friendlyName}
 
 			<Progress />
 		</FileName>
