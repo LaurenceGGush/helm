@@ -14,7 +14,7 @@ module.exports = {
 		"prettier",
 		"plugin:storybook/recommended",
 	],
-	ignorePatterns: ["dist/", "node_modules/"],
+	ignorePatterns: ["dist/", "node_modules/", "!.storybook/"],
 	plugins: [
 		"react",
 		"@typescript-eslint",

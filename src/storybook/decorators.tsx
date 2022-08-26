@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FC, useEffect, useMemo } from "react"
+import { Suspense, useEffect, useMemo } from "react"
 
 import "@fontsource/open-sans/latin-400.css"
 import "@fontsource/solway/latin-400.css"
@@ -14,18 +14,15 @@ import { Story } from "@storybook/react/types-6-0"
 import { Provider as JotaiProvider } from "jotai"
 import { useUpdateAtom } from "jotai/utils"
 
-import { Moonraker } from "../moonraker/moonraker"
-import { statusAtom } from "../store"
+import { idAtom, statusAtom } from "../store"
 import { Heaters } from "../store/types"
-import noopObj from "../utilities/noopProxy"
 import {
-	baseStatus,
+	baseData,
 	heatersOff,
 	heatersOn,
 	heatersOnRandomTemps,
-	readyInfo,
 } from "./mockdata"
-import { baseMockPrinter, MockStore, UpdateStore, useInit } from "./mocks"
+import { MockStore, UpdateStore } from "./mocks"
 
 export const eCache = createCache({
 	// arbitrary key
@@ -34,7 +31,7 @@ export const eCache = createCache({
 	stylisPlugins: [],
 })
 
-export const ProvidersDecorator = (Story: Story) => {
+export const ProvidersDecorator = (Story: Story, context: any) => {
 	// Storybook is creating a fixed height only in Firefox, so unset it to fix the display issue
 	useEffect(() => {
 		Array.from(
@@ -51,11 +48,13 @@ export const ProvidersDecorator = (Story: Story) => {
 	})
 
 	return (
-		<JotaiProvider>
+		<JotaiProvider initialValues={[[idAtom, context.id]]}>
 			<CacheProvider value={eCache}>
-				<MockStore info={readyInfo} status={baseStatus}>
-					<Story />
-				</MockStore>
+				<Suspense>
+					<MockStore responses={baseData} id={context.id}>
+						<Story />
+					</MockStore>
+				</Suspense>
 			</CacheProvider>
 		</JotaiProvider>
 	)
@@ -74,9 +73,13 @@ export const HeatersDecorator = (Story: Story, context: any) => {
 			: context.args.heating === "true"
 	const heatingStatus = heating ? heatersOn : heatersOff
 
-	const extruders: Heaters = Array(context.args.extruders)
-		.fill("extruder")
-		.map((e, i) => (i ? e + i : e))
+	const extruders: Heaters = useMemo(
+		() =>
+			Array(context.args.extruders)
+				.fill("extruder")
+				.map((e, i) => (i ? e + i : e)),
+		[context.args.extruders],
+	)
 
 	const heaters: Heaters = useMemo(
 		() => [...extruders, "heater_bed"],
@@ -90,7 +93,7 @@ export const HeatersDecorator = (Story: Story, context: any) => {
 		if (heating) {
 			interval = window.setInterval(() => {
 				updateStatus(heatersOnRandomTemps())
-			}, 250)
+			}, 500)
 		}
 
 		return () => {
@@ -99,8 +102,6 @@ export const HeatersDecorator = (Story: Story, context: any) => {
 			}
 		}
 	}, [heating, updateStatus])
-
-	// logger.log(context.args, heatingStatus)
 
 	return (
 		<UpdateStore
@@ -151,49 +152,6 @@ export const axesArgTypes = {
 		control: { type: "inline-check" },
 		description: "Mock arg to select homed axis",
 	},
-}
-
-export const ToolsDecorator: FC<Story> = (Story: Story) => {
-	const init = useInit()
-
-	const updateStatus = useUpdateAtom(statusAtom)
-	const noopPrinter = noopObj({
-		...baseMockPrinter,
-		init,
-		extruder: async (extruder: string) => {
-			const extruderNumber = parseInt(extruder, 10)
-
-			updateStatus({
-				toolhead: {
-					extruder: `extruder${extruderNumber}`,
-				},
-			})
-		},
-		tool: async (tool: string) => {
-			const toolNumber = parseInt(tool, 10)
-
-			updateStatus({
-				toolhead: {
-					extruder: `extruder${toolNumber}`,
-				},
-				dock: {
-					tool_number: `${parseInt(tool, 10) + 1}`,
-				},
-			})
-		},
-		dropoff: async () =>
-			updateStatus({
-				dock: {
-					tool_number: undefined,
-				},
-			}),
-	}) as Moonraker
-
-	return (
-		<UpdateStore printer={noopPrinter}>
-			<Story />
-		</UpdateStore>
-	)
 }
 
 export const canvasParameters = {

@@ -12,7 +12,7 @@ interface IdHeater extends Heater {
 const selectHeaters = (status: PrinterStatus) => {
 	const heaters = []
 
-	for (const heater of status.heaters?.available_heaters || []) {
+	for (const heater of status?.heaters?.available_heaters || []) {
 		heaters.push({
 			...status[heater],
 			temperature: toOneDP(status[heater]?.temperature || 0),
@@ -83,7 +83,7 @@ const toOneDP = (num: number) => {
 export default useHeaters
 
 const selectMultiExtruder = (status: PrinterStatus) => {
-	const extruders = status.heaters?.available_heaters?.filter((heater) =>
+	const extruders = status?.heaters?.available_heaters?.filter((heater) =>
 		heater.match(/^extruder/),
 	)
 
@@ -94,7 +94,7 @@ const multiExtruderAtom = selectAtom(statusAtom, selectMultiExtruder)
 export const useMultiExtruder = () => useAtomValue(multiExtruderAtom)
 
 const selectNumExtruders = (status: PrinterStatus) => {
-	const extruders = status.heaters?.available_heaters?.filter((heater) =>
+	const extruders = status?.heaters?.available_heaters?.filter((heater) =>
 		heater.match(/^extruder/),
 	)
 

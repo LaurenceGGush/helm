@@ -21,4 +21,8 @@ export default defineConfig({
 		},
 	},
 	server: { host: "127.0.0.1", port: 3000 },
+	test: {
+		globals: true,
+		setupFiles: "./src/test/setup.ts",
+	},
 })

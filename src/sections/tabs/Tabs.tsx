@@ -117,11 +117,11 @@ const Tabs: FC<TabsProps> = ({ showCam, closeCam, ...rest }) => {
 					<TabText>Tool{multiExtruder && "s"}</TabText>
 				</StyledTab>
 
-				<IconTab>
+				<IconTab aria-label="Output">
 					<Icon as={FaListUl} />
 				</IconTab>
 
-				<IconTab>
+				<IconTab aria-label="Klippy">
 					<Icon
 						className="Info"
 						as={printerReady ? FaInfo : FaExclamation}

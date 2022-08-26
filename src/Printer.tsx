@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useState } from "react"
 
-import { Flex } from "@chakra-ui/react"
+import { Box, BoxProps, Flex } from "@chakra-ui/react"
 import { css } from "@emotion/react"
 import styled from "@emotion/styled"
 
@@ -10,11 +10,11 @@ import usePrinterStatus from "./hooks/usePrinterStatus"
 import Header from "./sections/header"
 import Status from "./sections/status"
 import Tabs from "./sections/tabs"
+import { Store } from "./store"
 import { landscape } from "./theme/medias"
 import { logger } from "./utilities/logger"
 
 const Printer = () => {
-	const hostname = useHostname()
 	const [showDebug, setShowDebug] = useState(false)
 	const toggleDebug = useCallback(() => setShowDebug((sd) => !sd), [])
 
@@ -28,6 +28,8 @@ const Printer = () => {
 		}
 	}, [setShowCam])
 
+	logger.info("Printer")
+
 	return (
 		<>
 			<Header
@@ -38,22 +40,49 @@ const Printer = () => {
 
 			{showDebug ? (
 				<DebugInfo />
-			) : hostname ? (
-				<Main className="Main">
-					<Tabs css={tabsCss} showCam={showCam} closeCam={closeCam} />
-
-					<Status css={statusCss} />
-				</Main>
 			) : (
-				<Flex
-					justifyContent="center"
-					alignItems="center"
-					marginTop="30vh"
-				>
-					<Spinner />
-				</Flex>
+				<>
+					<Suspense
+						fallback={
+							<Flex
+								className="Main Fallback"
+								justifyContent="center"
+								alignItems="center"
+								marginTop="30vh"
+							>
+								<Spinner />
+							</Flex>
+						}
+					>
+						<Store />
+
+						<Main className="Main">
+							<Tabs
+								css={tabsCss}
+								showCam={showCam}
+								closeCam={closeCam}
+							/>
+
+							<Status css={statusCss} />
+						</Main>
+					</Suspense>
+				</>
 			)}
 		</>
+	)
+}
+
+const Main = (props: BoxProps) => {
+	const hostname = useHostname()
+
+	if (hostname) {
+		return <Box as="main" css={mainCss} {...props} />
+	}
+
+	return (
+		<Flex justifyContent="center" alignItems="center" marginTop="30vh">
+			<Spinner />
+		</Flex>
 	)
 }
 
@@ -93,7 +122,6 @@ const statusCss = css`
 
 const DebugInfo = () => {
 	const status = usePrinterStatus()
-	logger.log(status)
 
 	const htmlStyle = window.getComputedStyle(
 		document.querySelector("html") as HTMLElement,
@@ -110,6 +138,8 @@ const DebugInfo = () => {
 		fontSize: htmlStyle.getPropertyValue("font-size"),
 	}
 
+	logger.log("Debug", sizes, status)
+
 	return (
 		<Pre>
 			{JSON.stringify(sizes, null, 2)}
@@ -118,7 +148,7 @@ const DebugInfo = () => {
 	)
 }
 
-export const Main = memo(styled.main`
+const mainCss = css`
 	position: relative;
 
 	display: flex;
@@ -134,7 +164,7 @@ export const Main = memo(styled.main`
 	${landscape} {
 		flex-direction: row;
 	}
-`)
+`
 
 const Pre = styled.pre`
 	overflow-y: auto;

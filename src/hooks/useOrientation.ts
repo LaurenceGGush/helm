@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { landscapeBase } from "../theme/medias"
 
-const matcher = matchMedia(landscapeBase)
+const matcher = globalThis.matchMedia(landscapeBase)
 
 const useOrientation = () => {
 	const [landscape, setLandscape] = useState(matcher.matches)

@@ -31,7 +31,7 @@ const useFileMeta = (filename?: string): FileMeta => {
 
 	const metadata = useAsyncMemo<FileMeta>(
 		async () => {
-			if (!printer || !filename) {
+			if (!filename) {
 				return {}
 			}
 

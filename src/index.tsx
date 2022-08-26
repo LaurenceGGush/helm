@@ -1,4 +1,4 @@
-import { StrictMode } from "react"
+import { StrictMode, Suspense } from "react"
 
 import "@fontsource/open-sans/latin-400.css"
 import "@fontsource/solway/latin-400.css"
@@ -13,7 +13,6 @@ import { Provider as JotaiProvider } from "jotai"
 import { createRoot } from "react-dom/client"
 
 import Printer from "./Printer"
-import Store from "./store/Store"
 import theme from "./theme"
 
 export const eCache = createCache({
@@ -36,9 +35,9 @@ root.render(
 				<ChakraProvider theme={theme}>
 					<ColorModeScript initialColorMode="light" />
 
-					<Store />
-
-					<Printer />
+					<Suspense fallback="SHOULD NEVER BE HIT, ONLY HERE FOR SAFETY">
+						<Printer />
+					</Suspense>
 				</ChakraProvider>
 			</CacheProvider>
 		</JotaiProvider>

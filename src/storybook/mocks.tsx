@@ -1,102 +1,63 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FC, ReactNode, useEffect, useState } from "react"
 
-import { useSetAtom } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { RESET } from "jotai/utils"
 import { useUpdateAtom } from "jotai/utils"
 
-import { Moonraker } from "../moonraker/moonraker"
-import {
-	fluiddAtom,
-	gcodeHistoryAtom,
-	gcodeResponsesAtom,
-	infoAtom,
-	printerAtom,
-	recentAtom,
-	statusAtom,
-} from "../store"
-import { GcodeHistoryItem, PrinterInfo, PrinterStatus } from "../store/types"
+import Mockraker from "../__mocks__/mockraker"
+import { MoonrakerResponses } from "../moonraker/methods"
+import { idAtom, infoAtom, initialiseStatusAtom, Store } from "../store"
+import { PrinterInfo, PrinterStatus } from "../store/types"
 import { logger } from "../utilities/logger"
-import noopObj from "../utilities/noopProxy"
-import {
-	baseFluidd,
-	baseRecent,
-	fileMeta,
-	gcodes,
-	gcodeStore,
-	randomEndstops,
-	zTiltOutput,
-} from "./mockdata"
 
-export const baseMockPrinter = {
-	fileMeta: () => fileMeta,
-	listGcodes: () => gcodes,
-	queryEndstops: () => Promise.resolve(randomEndstops()),
-}
+const mockrakers: Record<string, ReturnType<typeof Mockraker>> = {}
 
 interface MockStoreProps {
-	printer?: Moonraker
-	info?: PrinterInfo
-	status?: PrinterStatus
-	fluidd?: any
-	recent?: any
+	id: string
+	responses: MoonrakerResponses
 	children?: ReactNode
 }
-export const MockStore: FC<MockStoreProps> = ({
-	children,
-	printer,
-	info,
-	status,
-	fluidd = baseFluidd,
-	recent = baseRecent,
-}) => {
-	const setPrinter = useUpdateAtom(printerAtom)
-	const setInfo = useUpdateAtom(infoAtom)
-	const setStatus = useUpdateAtom(statusAtom)
-	const setFluidd = useUpdateAtom(fluiddAtom)
-	const setRecent = useUpdateAtom(recentAtom)
-	const setGcodeHistory = useUpdateAtom(gcodeHistoryAtom)
-
-	const [stateUpdated, setStateUpdated] = useState(false)
-
-	const runInit = useInit()
-
-	if (!printer) {
-		printer = noopObj({
-			...baseMockPrinter,
-			init: runInit,
-		}) as Moonraker
-	}
-
-	// logger.log("mS", status)
+export const MockStore: FC<MockStoreProps> = ({ children, responses, id }) => {
+	const [mocked, setMocked] = useState(false)
 
 	useEffect(() => {
-		if (stateUpdated) return
+		if (mocked) {
+			return
+		}
 
-		setPrinter(() => printer)
-		setFluidd(() => fluidd)
-		setRecent(() => recent)
-		setGcodeHistory(gcodeStore)
-		info && setInfo(() => info)
-		status && setStatus(status)
-		setStateUpdated(true)
-	}, [
-		setPrinter,
-		setInfo,
-		setStatus,
-		info,
-		status,
-		printer,
-		setFluidd,
-		fluidd,
-		setGcodeHistory,
-		stateUpdated,
-		setRecent,
-		recent,
-	])
+		if (!mockrakers[id]) {
+			mockrakers[id] = Mockraker(responses, id)
+		}
 
-	if (!stateUpdated) {
-		logger.warn("nothing")
+		setMocked(true)
+	}, [id, mocked, responses])
+
+	if (!mocked) {
+		logger.info("Mocking...")
+		return <></>
+	}
+
+	logger.info("MockStore", id)
+
+	return (
+		<InitialiseStatus>
+			<Store />
+			{children}
+		</InitialiseStatus>
+	)
+}
+
+const InitialiseStatus = ({ children }: { children: ReactNode }) => {
+	const [initialised, initialiseStatus] = useAtom(initialiseStatusAtom)
+
+	useEffect(() => {
+		if (!initialised) {
+			initialiseStatus()
+		}
+	}, [initialiseStatus, initialised])
+
+	if (!initialised) {
 		return <></>
 	}
 
@@ -104,77 +65,58 @@ export const MockStore: FC<MockStoreProps> = ({
 }
 
 interface UpdateStoreProps {
-	printer?: Moonraker
 	info?: PrinterInfo
 	status?: PrinterStatus | typeof RESET
 	fluidd?: any
+	objectList?: (keyof PrinterStatus)[]
+	gcodeList?: any
 	children?: ReactNode
 }
 export const UpdateStore: FC<UpdateStoreProps> = ({
-	printer,
-	children,
 	info,
 	status,
 	fluidd,
+	objectList,
+	gcodeList,
+	children,
 }) => {
-	const setPrinter = useUpdateAtom(printerAtom)
+	const storyId = useAtomValue(idAtom)
 	const setInfo = useUpdateAtom(infoAtom)
-	const setStatus = useUpdateAtom(statusAtom)
-	const setFluidd = useUpdateAtom(fluiddAtom)
-	const setGcodeHistory = useUpdateAtom(gcodeHistoryAtom)
+	const responses = combineResponses(status, fluidd, objectList, gcodeList)
 
-	const [stateUpdated, setStateUpdated] = useState(false)
+	const [updated, setUpdated] = useState(false)
 
 	useEffect(() => {
-		printer && setPrinter(() => printer)
-		fluidd && setFluidd(() => fluidd)
-		info && setInfo(() => info)
-		status && setStatus(status)
-		setStateUpdated(true)
-	}, [
-		setInfo,
-		setStatus,
-		info,
-		status,
-		setFluidd,
-		fluidd,
-		setGcodeHistory,
-		stateUpdated,
-		printer,
-		setPrinter,
-	])
+		mockrakers[storyId].updateResponses(responses)
 
-	if (!stateUpdated) {
+		info && setInfo(info)
+
+		setUpdated(true)
+	}, [info, setInfo, storyId, responses])
+
+	if (!updated) {
 		return <></>
 	}
+
+	logger.info("Updated", storyId)
 
 	return <>{children}</>
 }
 
-export const useInit = () => {
-	const updateOutput = useSetAtom(gcodeResponsesAtom)
-
-	return () => {
-		updateOutput({
-			message: "INIT",
-			time: 1652535017.0145817,
-			type: "command",
-		})
-
-		outputZTilt(structuredClone(zTiltOutput), updateOutput)
+function combineResponses(
+	status: PrinterStatus | typeof RESET | undefined,
+	fluidd: any | undefined,
+	objectList: (keyof PrinterStatus)[] | undefined,
+	gcodeList: any | undefined,
+): MoonrakerResponses {
+	const responses = {
+		object_status: typeof status === "object" ? { status } : undefined,
+		db_item_get: fluidd ? { fluidd: { value: fluidd } } : undefined,
+		object_list: objectList ? { objects: objectList } : undefined,
+		file_list: gcodeList,
 	}
-}
 
-function outputZTilt(
-	outputs: GcodeHistoryItem[],
-	update: (output: GcodeHistoryItem) => void,
-) {
-	const output = outputs.shift()
-	if (output) {
-		update(output)
-
-		setTimeout(() => {
-			outputZTilt(outputs, update)
-		}, 500)
-	}
+	return Object.fromEntries(
+		Object.entries(responses).filter(([_, v]) => v !== undefined),
+	)
 }

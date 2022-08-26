@@ -54,20 +54,16 @@ const updatingPrinter = noopObj({
 export const UpdatingFiles = Template.bind({})
 UpdatingFiles.decorators = [
 	(Story) => (
-		<UpdateStore printer={updatingPrinter}>
+		<UpdateStore>
 			<Story />
 		</UpdateStore>
 	),
 ]
 
-const emptyListPrinter = noopObj({
-	listGcodes: () => [],
-}) as Moonraker
-
 export const EmptyList = Template.bind({})
 EmptyList.decorators = [
 	(Story) => (
-		<UpdateStore printer={emptyListPrinter}>
+		<UpdateStore gcodeList={[]}>
 			<Story />
 		</UpdateStore>
 	),

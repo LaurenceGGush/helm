@@ -1,5 +1,4 @@
 import { Story } from "@storybook/react/types-6-0"
-import { RESET } from "jotai/utils"
 
 import { AppRootDecorator } from "../../storybook/decorators"
 import {
@@ -68,7 +67,11 @@ NotReady.decorators = [
 export const Loading = Template.bind({})
 Loading.decorators = [
 	(Story) => (
-		<UpdateStore info={emptyInfo} fluidd={{}} status={resetStatus}>
+		<UpdateStore
+			info={emptyInfo}
+			fluidd={{ fluidd: {} }}
+			status={resetStatus}
+		>
 			<Story />
 		</UpdateStore>
 	),
@@ -86,10 +89,13 @@ NoCamera.decorators = [
 	),
 ]
 
+const noLEDsFluidd = {
+	uiSettings: { general: { instanceName: "NoLEDs" } },
+}
 export const NoLeds = Template.bind({})
 NoLeds.decorators = [
 	(Story) => (
-		<UpdateStore status={RESET}>
+		<UpdateStore objectList={[]} fluidd={noLEDsFluidd}>
 			<Story />
 		</UpdateStore>
 	),

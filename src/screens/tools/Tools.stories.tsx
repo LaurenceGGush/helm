@@ -1,10 +1,6 @@
 import { Story } from "@storybook/react/types-6-0"
 
-import {
-	heaterArgTypes,
-	HeatersDecorator,
-	ToolsDecorator,
-} from "../../storybook/decorators"
+import { heaterArgTypes, HeatersDecorator } from "../../storybook/decorators"
 import { pausedStatus } from "../../storybook/mockdata"
 import { UpdateStore } from "../../storybook/mocks"
 import Tools from "./Tools"
@@ -12,7 +8,7 @@ import Tools from "./Tools"
 export default {
 	title: "Screens/Tools",
 	component: Tools,
-	decorators: [ToolsDecorator, HeatersDecorator],
+	decorators: [HeatersDecorator],
 	argTypes: heaterArgTypes,
 	// parameters: { ...canvasParameters },
 }

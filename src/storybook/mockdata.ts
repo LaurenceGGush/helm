@@ -1,5 +1,6 @@
 import { RESET } from "jotai/utils"
 
+import { MoonrakerResponses } from "../moonraker/methods"
 import {
 	EndstopValue,
 	GcodeHistoryItem,
@@ -7,16 +8,14 @@ import {
 	PrinterStatus,
 } from "../store/types"
 
+export const version = "v0.10.0-somehash"
 const baseInfo = {
 	hostname: "MYP",
-	software_version: "v0.10.0-somehash",
+	software_version: version,
 }
 
 export const emptyInfo: PrinterInfo = {
-	state: "",
-	state_message: "",
 	hostname: "",
-	software_version: "",
 }
 
 export const startupInfo: PrinterInfo = {
@@ -28,8 +27,8 @@ export const startupInfo: PrinterInfo = {
 
 export const disconnectedInfo: PrinterInfo = {
 	...baseInfo,
-	state: "startup",
-	state_message: "Klippy Disconnected!\nReconnecting...",
+	state: "closed",
+	state_message: "Reconnecting...",
 }
 
 export const errorInfo: PrinterInfo = {
@@ -104,7 +103,7 @@ export const heatersOnRandomTemps = (): PrinterStatus => ({
 	heater_bed: { temperature: 58.8 + rand(), target: 60, power: 0.2 },
 })
 
-const baseEndstops = {
+export const baseEndstops = {
 	"manual_stepper tool_lock": "TRIGGERED",
 	x: "open",
 	z: "open",
@@ -147,11 +146,18 @@ export const baseStatus: PrinterStatus = {
 	},
 	toolhead: { extruder: "extruder", homed_axes: "xyz" },
 	dock: {},
-	query_endstops: { last_query: baseEndstops },
-	"gcode_macro NOZZLE_SCRUB": {},
-	"gcode_macro INIT": {},
 	"gcode_macro LEDS": {},
+	"gcode_macro NOZZLE_SCRUB": {},
 }
+
+export const baseList = Object.keys(baseStatus) as (keyof PrinterStatus)[]
+export const homingList: (keyof PrinterStatus)[] = [
+	...baseList,
+	"gcode_macro HOME",
+	"gcode_macro INIT",
+	"gcode_macro HOME_2",
+	"gcode_macro INIT_SHORT",
+]
 
 export const heatersOff: PrinterStatus = {
 	extruder: { temperature: 23.4, target: 0, power: 0, can_extrude: false },
@@ -204,7 +210,10 @@ export const printingStatus: PrinterStatus = {
 }
 
 export const resetStatus = RESET as unknown as PrinterStatus
-
+const cameraLocation = globalThis?.document?.location || {
+	protocol: "http:",
+	host: "localhost",
+}
 export const baseFluidd = {
 	cameras: {
 		cameras: [
@@ -215,7 +224,7 @@ export const baseFluidd = {
 				type: "mjpgadaptive",
 				fpstarget: 30,
 				fpsidletarget: 1,
-				url: `${document.location.protocol}//${document.location.host}/camera.jpg?action=stream`,
+				url: `${cameraLocation.protocol}//${cameraLocation.host}/camera.jpg?action=stream`,
 				flipX: false,
 				flipY: false,
 				height: 720,
@@ -418,3 +427,17 @@ export const zTiltOutput: GcodeHistoryItem[] = [
 		type: "response",
 	},
 ]
+
+export const baseData: MoonrakerResponses = {
+	server_info: { klippy_connected: true },
+	file_list: gcodes,
+	metadata: fileMeta,
+	printer_info: readyInfo,
+	db_item_get: {
+		fluidd: { value: baseFluidd },
+	},
+	object_list: { objects: baseList },
+	gcode_store: { gcode_store: gcodeStore },
+	query_endstops: baseEndstops,
+	object_status: { status: baseStatus },
+}

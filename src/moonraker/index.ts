@@ -1,12 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { RequestError } from "../errors"
 import type { FileMeta } from "../hooks/useFileMeta"
 import { wsUrl } from "../settings"
-import type { PrinterInfo, PrinterStatus } from "../store/types"
+import type {
+	GcodeHistoryItem,
+	PrinterInfo,
+	PrinterStatus,
+} from "../store/types"
 import { logger } from "../utilities/logger"
 import Connection from "./connection"
-import methods from "./definitions"
+import methods from "./methods"
 
 const handleError = (error: Error) => {
 	if (error instanceof RequestError) {
@@ -16,59 +18,63 @@ const handleError = (error: Error) => {
 	}
 }
 
-async function moonraker() {
-	const connection = await Connection(wsUrl)
-	// logger.info("socket", socket)
+async function moonraker(id: string) {
+	const connection = Connection(`${wsUrl}${id ? `/${id}` : ""}`)
+
+	try {
+		await connection.open()
+	} catch (error) {
+		logger.error("Server Error: can't connect to moonraker")
+	}
 
 	return {
+		open: connection.open,
+
 		gcode(script: string) {
 			connection
-				.request(methods.gcode_script.method, { script })
-				.then((result) => logger.info("gcode", result), handleError)
+				.call(methods.gcode_script, {
+					script: script.toLocaleUpperCase(),
+				})
+				.then(
+					(result) => logger.info("gcode", script, result),
+					handleError,
+				)
 		},
 
-		gcodeHistory() {
+		gcodeHistory(): Promise<GcodeHistoryItem[]> {
 			return connection
-				.request(methods.gcode_store.method, {
+				.call(methods.gcode_store, {
 					count: 100,
 				})
-				.then(
-					(result: any) => result.gcode_store || [],
-					(error) => logger.error(error),
-				)
+				.then((result) => result.gcode_store || [])
 		},
 
-		fluidd(): Promise<PrinterInfo> {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		fluidd(): Promise<any> {
 			return connection
-				.request(methods.db_item.method.get, {
+				.call(methods.db_item_get, {
 					namespace: "fluidd",
 				})
-				.then(
-					(result: any) => result.value,
-					(error) => logger.error(error),
-				)
+				.then((result) => result.value)
 		},
 
 		recent(key?: string) {
 			return connection
-				.request(methods.db_item.method.get, {
+				.call(methods.db_item_get, {
 					namespace: "helm",
 					key: key ? `recent.${key}` : "recent",
 				})
-				.then(
-					(result: any) => result.value,
-					(error) => logger.error(error),
-				)
+				.then((result) => result.value)
 		},
 
 		async setRecent(key: string, value: number) {
 			const recent = await connection
-				.request(methods.db_item.method.get, {
+				.call(methods.db_item_get, {
 					namespace: "helm",
 					key: `recent.${key}`,
 				})
 				.then(
-					(result: any) => JSON.parse(result.value),
+					(result) => JSON.parse(result.value),
 					(error) => logger.error(error),
 				)
 
@@ -77,188 +83,165 @@ async function moonraker() {
 			}
 			recent.unshift(value)
 
-			const updated = await connection.request(
-				methods.db_item.method.post,
-				{
-					namespace: "helm",
-					key: `recent.${key}`,
-					value: JSON.stringify(recent),
-				},
-			)
+			const updated = await connection.call(methods.db_item_post, {
+				namespace: "helm",
+				key: `recent.${key}`,
+				value: JSON.stringify(recent),
+			})
 
 			return updated
 		},
 
-		info(): Promise<PrinterInfo> {
-			return connection.request(methods.printer_info.method).then(
-				(result: any) => result,
-				(error) => logger.error(error),
-			)
+		serverInfo() {
+			return connection.call(methods.server_info)
 		},
 
-		status(objects: object) {
+		info(): Promise<PrinterInfo> {
+			const info = connection.call(methods.printer_info)
+			info.then((res) => logger.info("info", res))
+			return info
+		},
+
+		objectList(): Promise<(keyof PrinterStatus)[]> {
 			return connection
-				.request(methods.object_status.method, {
+				.call(methods.object_list)
+				.then((result) => result.objects)
+		},
+
+		status(objects: object): Promise<PrinterStatus> {
+			return connection
+				.call(methods.object_status, {
 					objects,
 				})
-				.then(
-					(result: any) => result.status,
-					(error) => logger.error(error),
-				)
+				.then((result) => result.status)
 		},
 
 		subscribeKlippyReady(callback: () => void) {
-			connection.subscribe(methods.notify_klippy_ready.method, callback)
-
-			return () =>
-				connection.unsubscribe(methods.notify_klippy_ready.method)
+			return connection.subscribe(methods.notify_klippy_ready, callback)
 		},
 		subscribeKlippyDisconnected(callback: () => void) {
-			connection.subscribe(
-				methods.notify_klippy_disconnected.method,
+			return connection.subscribe(
+				methods.notify_klippy_disconnected,
 				callback,
 			)
-
-			return () =>
-				connection.unsubscribe(
-					methods.notify_klippy_disconnected.method,
-				)
 		},
-		subscribeSocketClosed(callback: () => void) {
-			connection.subscribe("socketClosed", callback)
-
-			return () => connection.unsubscribe("socketClosed")
+		subscribeSocketClosed(callback: (reason: string) => void) {
+			return connection.subscribe("socketClosed", callback)
+		},
+		subscribeSocketOpening(callback: () => void) {
+			return connection.subscribe("socketOpening", callback)
 		},
 		subscribeSocketOpened(callback: () => void) {
-			connection.subscribe("socketOpened", callback)
-
-			return () => connection.unsubscribe("socketOpened")
+			return connection.subscribe("socketOpened", callback)
 		},
 
 		subscribeStatusUpdates(
 			objects: object,
 			callback: (newStatus: PrinterStatus) => void,
 		) {
-			connection.request(methods.object_subscription.method, {
+			connection.call(methods.object_subscription, {
 				objects,
 			})
-			connection.subscribe(
-				methods.notify_status.method,
+			return connection.subscribe(
+				methods.notify_status_update,
 				(newStatus: PrinterStatus[]) => callback(newStatus[0]),
 			)
-
-			return () => connection.unsubscribe(methods.notify_status.method)
 		},
 
 		subscribeGcodeResponse(callback: (message: string[]) => void) {
-			connection.subscribe(methods.notify_gcode.method, callback)
-			return () => connection.unsubscribe(methods.notify_gcode.method)
+			return connection.subscribe(methods.notify_gcode_response, callback)
 		},
 
 		restart() {
 			connection
-				.request(methods.restart.method)
+				.call(methods.restart)
 				.then((res) => logger.info("restart", res))
 		},
 		reallyRestart() {
 			connection
-				.request(methods.firmware_restart.method)
+				.call(methods.firmware_restart)
 				.then((res) => logger.info("really restart", res))
 		},
 		reboot() {
 			connection
-				.request(methods.reboot.method)
+				.call(methods.reboot)
 				.then((res) => logger.info("reboot", res))
 		},
 		shutdown() {
 			connection
-				.request(methods.shutdown.method)
+				.call(methods.shutdown)
 				.then((res) => logger.info("shutdown", res))
 		},
 		estop() {
 			connection
-				.request(methods.estop.method)
+				.call(methods.estop)
 				.then((res) => logger.info("emergency!!!!", res))
 		},
 
 		queryEndstops() {
-			return connection
-				.request(methods.query_endstops.method)
-				.then((result) => {
-					logger.info("endstops", result)
-					return result
-				})
+			return connection.call(methods.query_endstops).then((result) => {
+				logger.info("endstops", result)
+				return result
+			})
 		},
 
 		start(filename: string) {
 			connection
-				.request(methods.start_print.method, {
+				.call(methods.start_print, {
 					filename,
 				})
 				.then((res) => logger.info("start", res))
 		},
 		pause() {
 			connection
-				.request(methods.pause_print.method)
+				.call(methods.pause_print)
 				.then((res) => logger.info("pause", res))
 		},
 		resume() {
 			connection
-				.request(methods.resume_print.method)
+				.call(methods.resume_print)
 				.then((res) => logger.info("resume", res))
 		},
 		cancel() {
 			connection
-				.request(methods.cancel_print.method)
+				.call(methods.cancel_print)
 				.then((res) => logger.info("cancel", res))
 		},
 
 		subscribeGcodesUpdates(callback: () => void) {
-			connection.subscribe(methods.notify_filelist.method, callback)
-
-			return () => connection.unsubscribe(methods.notify_filelist.method)
+			return connection.subscribe(
+				methods.notify_filelist_changed,
+				callback,
+			)
 		},
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		listGcodes(): Promise<any[]> {
-			return connection.request(methods.file_list.method)
+			return connection.call(methods.file_list)
 		},
 		fileMeta(filename: string): Promise<FileMeta> {
-			return connection.request(methods.metadata.method, {
+			return connection.call(methods.metadata, {
 				filename,
 			})
 		},
 
 		loadGcode(filename: string) {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `M23 ${filename}`,
 				})
 				.then((res) => logger.info("loaded gcode", res))
 		},
 		unLoadGcode() {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `SDCARD_RESET_FILE`,
 				})
 				.then((res) => logger.info("unloaded gcode", res))
 		},
 
-		init() {
-			connection
-				.request(methods.gcode_script.method, {
-					script: `INIT`,
-				})
-				.then((res) => logger.info("INIT", res))
-		},
-		home() {
-			connection
-				.request(methods.gcode_script.method, {
-					script: `G28`,
-				})
-				.then((res) => logger.info("HOME", res))
-		},
 		tram() {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `Z_TILT_ADJUST`,
 				})
 				.then((res) => logger.info("Tram", res))
@@ -270,7 +253,7 @@ async function moonraker() {
 				: "extruder"
 
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `activate_extruder extruder=${ext}`,
 				})
 				.then((res) => logger.info(`E${extruder}`, res))
@@ -278,14 +261,14 @@ async function moonraker() {
 
 		tool(tool: string) {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `T${tool}`,
 				})
 				.then((res) => logger.info(`T${tool}`, res))
 		},
 		dropOffTool() {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `TOOL_DROPOFF`,
 				})
 				.then((res) => logger.info("drop off", res))
@@ -293,7 +276,7 @@ async function moonraker() {
 
 		moveBy(distance: number | string, axis: string) {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `MOVE_BY A=${axis} D=${distance}`,
 				})
 				.then((res) => logger.info(`${axis} ${distance}`, res))
@@ -301,7 +284,7 @@ async function moonraker() {
 
 		adjustOffset(distance: number, axis: string) {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `SET_GCODE_OFFSET ${axis}_ADJUST=${distance} MOVE=1`,
 				})
 				.then((res) =>
@@ -311,7 +294,7 @@ async function moonraker() {
 
 		extrude(distance: number, feed: number) {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `MOVE_BY A=E D=${distance} F=${feed * 60}`,
 				})
 				.then((res) => logger.info(`E ${distance}`, res))
@@ -319,7 +302,7 @@ async function moonraker() {
 
 		nozzleScrub() {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `NOZZLE_SCRUB`,
 				})
 				.then((res) => logger.info("scrub", res))
@@ -327,7 +310,7 @@ async function moonraker() {
 
 		turnOffMotors() {
 			connection
-				.request(methods.gcode_script.method, {
+				.call(methods.gcode_script, {
 					script: `M84`,
 				})
 				.then((res) => logger.info("turn off motors", res))

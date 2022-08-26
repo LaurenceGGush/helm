@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react"
 import { Story } from "@storybook/react/types-6-0"
 
+import { logger } from "../../utilities/logger"
 import Adjust, { AdjustProps } from "./Adjust"
 
 const AdjustDecorator = (Story: Story) => (
@@ -27,7 +28,7 @@ export default {
 	},
 	parameters: { controls: { exclude: ["onClose", "onUpdate"] } },
 	args: {
-		onUpdate: (v: number) => console.log("adjust", v),
+		onUpdate: (v: number) => logger.log("adjust", v),
 	},
 }
 

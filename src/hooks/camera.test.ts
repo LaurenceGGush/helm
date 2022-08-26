@@ -1,3 +1,5 @@
+import { expect, test } from "vitest"
+
 import { calculateFps } from "./calculateFps"
 
 test("18 FPS", () => {

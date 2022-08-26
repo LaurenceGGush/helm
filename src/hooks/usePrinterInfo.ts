@@ -1,20 +1,21 @@
 import equal from "fast-deep-equal"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtomValue } from "jotai"
 import { selectAtom } from "jotai/utils"
 
 import { infoAtom, serverSettingsAtom } from "../store"
 import type { PrinterInfo, ServerSettings } from "../store/types"
 
-const usePrinterInfo = () => useAtom(infoAtom)[0]
+const usePrinterInfo = () => useAtomValue(infoAtom)
 export default usePrinterInfo
 
 const selectPrinterReady = (info: PrinterInfo) => {
 	const state = info?.state
 
 	return {
-		printerStarting: state === "startup",
+		printerStarting: state === "startup" || state === "opening",
 		printerReady: state === "ready",
-		printerError: state === "error" || state === "closed",
+		printerError:
+			state === "error" || state === "closed" || state === "shutdown",
 	}
 }
 const readyAtom = selectAtom(infoAtom, selectPrinterReady, equal)

@@ -12,7 +12,6 @@ import {
 	canvasParameters,
 	heaterArgTypes,
 	HeatersDecorator,
-	ToolsDecorator,
 } from "./storybook/decorators"
 import {
 	disconnectedInfo,
@@ -28,7 +27,7 @@ import { UpdateStore } from "./storybook/mocks"
 export default {
 	title: "Printer",
 	component: Printer,
-	decorators: [AppRootDecorator, ToolsDecorator],
+	decorators: [AppRootDecorator],
 	parameters: { ...canvasParameters },
 }
 
@@ -37,7 +36,6 @@ const Template: Story = (args) => <Printer {...args} />
 export const Ready = Template.bind({})
 Ready.decorators = [HeatersDecorator, AxesDecorator]
 Ready.argTypes = { ...heaterArgTypes, ...axesArgTypes }
-// Ready.args = { homed: ["x", "y", "z"] }
 
 export const Printing = Template.bind({})
 Printing.decorators = [

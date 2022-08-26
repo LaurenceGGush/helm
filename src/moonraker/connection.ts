@@ -1,136 +1,187 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { nanoid } from "nanoid"
+import Sockette from "sockette"
 
 import { RequestError } from "../errors"
 import deferred from "../utilities/deferred"
 import { logger } from "../utilities/logger"
+import methods from "./methods"
 
-let socket: WebSocket
+type Subscription =
+	| "socketOpened"
+	| "socketClosed"
+	| "socketOpening"
+	| keyof Pick<
+			typeof methods,
+			| "notify_filelist_changed"
+			| "notify_gcode_response"
+			| "notify_klippy_disconnected"
+			| "notify_klippy_ready"
+			| "notify_status_update"
+	  >
 
-const requests = new Map()
-const subscriptions = new Map()
+function Connection(wsUrl: string) {
+	let sockette: Sockette
+	let opening: ReturnType<typeof deferred<void>> | undefined,
+		closing: ReturnType<typeof deferred<void>> | undefined
+	const requests = new Map()
+	const subscriptions: Map<Subscription, any> = new Map()
 
-async function connection(url: string) {
-	if (socket instanceof WebSocket && socket.readyState === WebSocket.OPEN) {
-		return { request, subscribe, unsubscribe }
+	return {
+		call,
+		subscribe,
+		unsubscribe,
+		open,
+		close: () => sockette.close(),
+		opened,
+		closed,
 	}
 
-	await connect(url)
-
-	return { request, subscribe, unsubscribe }
-}
-
-async function connect(url: string) {
-	const { promise, resolve } = deferred()
-	socket = new WebSocket(url)
-
-	socket.onopen = (event) => {
-		logger.info("socket opened", event)
-
-		if (subscriptions.has("socketOpened")) {
-			subscriptions.get("socketOpened")()
+	async function opened() {
+		if (!opening) {
+			opening = deferred()
 		}
 
-		resolve()
+		return opening.promise
 	}
-
-	socket.onclose = (event) => {
-		logger.info(`socket closed: ${event.reason}`, `reconnecting in 1s`)
-
-		if (subscriptions.has("socketClosed")) {
-			subscriptions.get("socketClosed")()
+	async function closed() {
+		if (!closing) {
+			closing = deferred()
 		}
 
-		setTimeout(async () => {
-			resolve(await connect(url))
-		}, 1000)
+		return closing.promise
 	}
-
-	socket.onerror = (error) => {
-		logger.error("socket error: ", error)
-		socket.close()
-	}
-
-	socket.onmessage = handleMessage
-
-	return promise
-}
-
-async function request(
-	method: string,
-	params?: object,
-	action = "",
-): Promise<any> {
-	if (socket.readyState !== WebSocket.OPEN) {
-		return Promise.reject(new Error("socket not open"))
-	}
-
-	const { promise, resolve, reject } = deferred()
-
-	const id = nanoid()
-
-	requests.set(id, {
-		method,
-		action,
-		params,
-		resolve,
-		reject,
-	})
-
-	socket.send(createMessage(method, params, id))
-
-	return promise
-}
-
-function subscribe(method: string, callback: CallableFunction) {
-	logger.info("sub", method)
-	subscriptions.set(method, callback)
-}
-
-function unsubscribe(method: string) {
-	logger.info("unsub", method)
-	subscriptions.delete(method)
-}
-
-function handleMessage(message: MessageEvent) {
-	const data = JSON.parse(message.data)
-
-	// If the message has no ID look for a generic handler in subscriptions
-	if (!Object.prototype.hasOwnProperty.call(data, "id")) {
-		if (subscriptions.has(data.method)) {
-			subscriptions.get(data.method)(data.params)
+	async function open() {
+		if (sockette) {
+			sockette.open()
 		}
 
-		return
+		if (!opening) {
+			opening = deferred()
+		}
+
+		sockette = new Sockette(wsUrl, {
+			timeout: process.env.NODE_ENV === "test" ? 0 : 250,
+
+			onopen: () => {
+				logger.info("Socket opened")
+
+				if (subscriptions.has("socketOpened")) {
+					subscriptions.get("socketOpened")()
+				}
+
+				opening?.resolve()
+				opening = undefined
+			},
+			onclose: async (event) => {
+				// test cleanup
+				if (event.reason === "test end") {
+					logger.log(event.reason)
+					return
+				}
+
+				logger.info(
+					"Socket closed",
+					event.code,
+					event.wasClean,
+					event.reason,
+				)
+
+				if (subscriptions.has("socketClosed")) {
+					subscriptions.get("socketClosed")(event.reason)
+				}
+
+				opening?.reject("Socket Error")
+				closing?.resolve()
+			},
+			// onerror: () => logger.error("Socket Error"),
+			onmessage: handleMessage,
+			onreconnect: (event) => {
+				const reason = (event as CloseEvent)?.reason
+				logger.log("Reconnecting...", reason)
+
+				if (subscriptions.has("socketOpening")) {
+					subscriptions.get("socketOpening")(reason)
+				}
+			},
+			onmaximum: (e) => logger.log("Stop Attempting!", e?.reason),
+		})
+
+		return opening.promise
 	}
 
-	if (requests.has(data.id)) {
-		const request = requests.get(data.id)
-		requests.delete(data.id)
+	async function call(
+		method: string,
+		params?: object,
+		action = "",
+	): Promise<any> {
+		const { promise, resolve, reject } = deferred()
 
-		logger.log("re", request)
+		const id = nanoid()
 
-		if (data.error) {
-			const errorData = {
-				id: data.id,
-				method: request.method,
-				action: request.action,
-				data: {
-					requestParams: request.params,
-					error: data.error,
-				},
+		sockette.send(createMessage(method, params, id))
+
+		requests.set(id, {
+			method,
+			action,
+			params,
+			resolve,
+			reject,
+		})
+
+		return promise
+	}
+
+	function subscribe(method: Subscription, callback: CallableFunction) {
+		logger.info("sub", method)
+		subscriptions.set(method, callback)
+
+		return () => unsubscribe(method)
+	}
+
+	function unsubscribe(method: Subscription) {
+		logger.info("unsub", method)
+		subscriptions.delete(method)
+	}
+
+	function handleMessage(message: MessageEvent) {
+		const data = JSON.parse(message.data)
+
+		// If the message has no ID look for a generic handler in subscriptions
+		if (!data.id) {
+			logger.log("d", data)
+
+			if (subscriptions.has(data.method)) {
+				subscriptions.get(data.method)(data.params)
 			}
 
-			if (data.error.code > 400) {
+			return
+		}
+
+		if (requests.has(data.id)) {
+			const request = requests.get(data.id)
+			requests.delete(data.id)
+
+			logger.log("d", data)
+
+			if (data.error) {
+				const errorData = {
+					id: data.id,
+					method: request.method,
+					action: request.action,
+					data: {
+						requestParams: request.params,
+						error: data.error,
+					},
+				}
+
 				logger.error("Request Error data:", errorData)
-				request.reject(new Error(data.error.message))
+				request.reject(new RequestError(data.error.message, errorData))
+			} else {
+				const result = data.result === "ok" ? true : data.result
+
+				request.resolve(result)
 			}
-
-			request.reject(new RequestError(data.error.message, errorData))
-		} else {
-			const result = data.result === "ok" ? true : data.result
-
-			request.resolve(result)
 		}
 	}
 }
@@ -144,4 +195,4 @@ function createMessage(method: string, params?: object, id?: string) {
 	})
 }
 
-export default connection
+export default Connection

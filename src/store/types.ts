@@ -1,8 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AdjustProps } from "../components/adjust/Adjust"
+import { homePrefixes } from "../hooks/useMacros"
 
 export interface PrinterInfo {
-	state?: string
+	state?:
+		| "startup"
+		| "ready"
+		| "error"
+		| "opening"
+		| "closed"
+		| "disconnected"
+		| "shutdown"
 	state_message?: string
 	hostname?: string
 	software_version?: string
@@ -61,7 +69,7 @@ export interface PrinterStatus {
 		extruder?: "extruder" | `extruder${number}`
 		homed_axes?: string
 	}
-	webhooks?: { state: string; state_message: string }
+	webhooks?: { state: PrinterInfo["state"]; state_message: string }
 	query_endstops?: { last_query: Endstops }
 	dock?: { tool_number?: string }
 	[key: `gcode_macro ${string}`]: any
@@ -93,3 +101,38 @@ export type Adjuster = {
 }
 
 export type AdjusterAction = Adjuster | "close"
+
+type Character =
+	| "a"
+	| "b"
+	| "c"
+	| "d"
+	| "e"
+	| "f"
+	| "g"
+	| "h"
+	| "i"
+	| "j"
+	| "k"
+	| "l"
+	| "m"
+	| "n"
+	| "o"
+	| "p"
+	| "q"
+	| "r"
+	| "s"
+	| "t"
+	| "u"
+	| "v"
+	| "w"
+	| "x"
+	| "y"
+	| "z"
+type Digit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+// must start with a lower case alpha numeric, not ideal but close enough
+type notEmptyString = `${Character | Digit}${string}`
+type underscoreString = `_${notEmptyString}`
+
+type HomePrefixes = typeof homePrefixes[number]
+export type HomeIs = "G28" | `${HomePrefixes}${underscoreString | ""}`

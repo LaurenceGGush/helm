@@ -1,17 +1,17 @@
 import { ProvidersDecorator } from "../src/storybook/decorators"
-import theme from '../src/theme'
+import theme from "../src/theme"
 
 export const decorators = [ProvidersDecorator]
 
 export const parameters = {
-  actions: { argTypesRegex: "^on[A-Z].*" },
-  controls: {
-    matchers: {
-      color: /(background|color)$/i,
-      date: /Date$/,
-    },
-  },
-  options: {
+	actions: { argTypesRegex: "^on[A-Z].*" },
+	controls: {
+		matchers: {
+			color: /(background|color)$/i,
+			date: /Date$/,
+		},
+	},
+	options: {
 		storySort: {
 			order: [
 				"Printer",
@@ -69,13 +69,13 @@ export const parameters = {
 		canvas: { hidden: true },
 	},
 
-	docs:{
+	docs: {
 		source: {
 			excludeDecorators: true,
 		},
 	},
-	
+
 	features: { emotionAlias: false },
 
-	chakra:{ theme }
+	chakra: { theme },
 }

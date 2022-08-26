@@ -35,10 +35,6 @@ const useGcodes = (): GcodeFile[] => {
 	const [now, setNow] = useState(new Date())
 
 	useEffect(() => {
-		if (!printer) {
-			return
-		}
-
 		const unsub = printer.subscribeGcodesUpdates(() => setNow(new Date()))
 
 		return unsub
@@ -46,10 +42,6 @@ const useGcodes = (): GcodeFile[] => {
 
 	const gcodes = useAsyncMemo(
 		async () => {
-			if (!printer) {
-				return []
-			}
-
 			const result = await printer.listGcodes()
 			const sorted = result?.sort(sortByDate)
 			const processed = processGcodes(sorted.slice(0, 10))
