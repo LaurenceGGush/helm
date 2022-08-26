@@ -270,15 +270,18 @@ const FeedsAndSpeedsRow = styled(StatusRow)`
 	}
 `
 
+const wtf_emotion = `/* emotion-disable-server\
+-rendering-unsafe-selector-warning-please-do\
+-not-use-this-the-warning-exists-for-a-reason */`
 const BedWrapper = styled(Flex)`
 	justify-content: center;
 
-	&:nth-child(odd) {
+	&:nth-child(odd) ${wtf_emotion} {
 		flex-grow: 1;
 	}
 
 	${landscape} {
-		&:nth-child(odd) {
+		&:nth-child(odd) ${wtf_emotion} {
 			flex-grow: 0;
 		}
 	}
