@@ -67,7 +67,7 @@ const button: ComponentStyleConfig = {
 				filter: depth,
 				transform: "translateY(var(--chakra-space-depth-minus))",
 				transitionProperty:
-					"filter, transform, color, background-color",
+					"filter, transform, opacity, color, background-color",
 				// zIndex: "docked",
 				_hover: {
 					bg: "hover-bg",

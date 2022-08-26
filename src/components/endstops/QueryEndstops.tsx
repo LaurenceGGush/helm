@@ -5,11 +5,13 @@ import { css } from "@emotion/react"
 import { CSSTransition, TransitionGroup } from "react-transition-group"
 
 import usePrinter from "../../hooks/usePrinter"
+import { usePrinterReady } from "../../hooks/usePrinterInfo"
 import { useEndstops } from "../../hooks/usePrinterStatus"
 import type { Endstops } from "../../store/types"
 
 const QueryEndstops = () => {
 	const printer = usePrinter()
+	const { printerReady } = usePrinterReady()
 
 	const endstops = useEndstops()
 	const [queriedEndstops, setQueriedEndstops] = useState<Endstops>({})
@@ -44,6 +46,7 @@ const QueryEndstops = () => {
 			<Button
 				display="flex"
 				size="sm"
+				disabled={!printerReady}
 				onClick={() =>
 					printer.queryEndstops().then(handleQueriedEndstops)
 				}

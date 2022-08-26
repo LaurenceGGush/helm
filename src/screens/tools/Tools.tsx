@@ -9,15 +9,16 @@ import type { PushButtonOption } from "../../components/pushButtons"
 import PushButtons from "../../components/pushButtons"
 import StackButton from "../../components/stackButton"
 import { useMultiExtruder, useNumExtruders } from "../../hooks/useHeaters"
+import { useAvailableMacros } from "../../hooks/useMacros"
 import usePrinter from "../../hooks/usePrinter"
 import {
 	useActiveExtruder,
-	useAvailableMacros,
 	useCanExtrude,
 	useHomed,
 	usePrintingOrPaused,
 	useSelectedTool,
 } from "../../hooks/usePrinterStatus"
+import { useSendGcode } from "../../hooks/useSendGcodes"
 import { Moonraker } from "../../moonraker/moonraker"
 import { logger } from "../../utilities/logger"
 
@@ -34,6 +35,7 @@ const Tools = () => {
 	const canExtrude = useCanExtrude()
 	const selectedTool = useSelectedTool()
 	const { nozzle_scrub } = useAvailableMacros()
+	const sendGcode = useSendGcode()
 
 	const activateExtruderOptions = useMemo(
 		() =>
@@ -64,7 +66,12 @@ const Tools = () => {
 		[homed, printingOrPaused],
 	)
 
-	const handleUpdateTool = useCallback(
+	const handleActivateExtruder = useCallback(
+		(extruder: number) => printer.extruder(extruder.toString()),
+		[printer],
+	)
+
+	const handleSelectTool = useCallback(
 		(tool: number | undefined) => {
 			if (typeof tool === "number") {
 				printer.tool(tool.toString())
@@ -87,9 +94,7 @@ const Tools = () => {
 						fontSize="md"
 						isDisabled={printingOrPaused}
 						value={currentExtruder}
-						updateValue={(extruder) =>
-							printer.extruder(extruder.toString())
-						}
+						updateValue={handleActivateExtruder}
 						options={activateExtruderOptions}
 					/>
 
@@ -101,7 +106,7 @@ const Tools = () => {
 						mb={2}
 						isDisabled={disableToolChanging}
 						value={selectedTool}
-						updateValue={handleUpdateTool}
+						updateValue={handleSelectTool}
 						options={selectToolOptions}
 					></PushButtons>
 				</>
@@ -116,7 +121,7 @@ const Tools = () => {
 					fontSize="md"
 					mt="3vh"
 					disabled={!canExtrude}
-					onClick={() => printer.nozzleScrub()}
+					onClick={() => sendGcode("NOZZLE_SCRUB")}
 				>
 					Scrub
 				</Button>

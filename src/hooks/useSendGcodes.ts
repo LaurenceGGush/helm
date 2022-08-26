@@ -8,9 +8,13 @@ export const useSendGcode = () => {
 	const updateOutput = useSetAtom(gcodeResponsesAtom)
 
 	return (command: string) => {
-		printer.gcode(command)
+		printer.gcode(command.toLocaleUpperCase())
 
-		updateOutput({ message: command, type: "command", time: Date.now() })
+		updateOutput({
+			message: command.toLocaleUpperCase(),
+			type: "command",
+			time: Date.now(),
+		})
 	}
 }
 

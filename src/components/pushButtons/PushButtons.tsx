@@ -50,12 +50,12 @@ const PushButtons = <T extends string | number | undefined>({
 			css={[vertical && verticalCss, stretch && stretchCss]}
 			{...rest}
 		>
-			{options.map((option) => {
+			{options.map((option, index) => {
 				const selected = value === option.value
 
 				return (
 					<Button
-						key={option.value}
+						key={option.value || index}
 						onClick={() => updateValue(option.value)}
 						className={selected ? "selected" : ""}
 						fontSize={fontSize}
@@ -93,6 +93,8 @@ const stretchCss = css`
 
 const buttonCss = css`
 	flex-grow: 1;
+
+	min-height: 100%;
 
 	z-index: 100;
 
