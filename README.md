@@ -3,7 +3,7 @@
 A touch user interface for [Klipper](https://github.com/Klipper3d/klipper) based 3d printers.
 
 ## WIP
-This is a work in progress and not ready for production use. However if you like tinker with your printers I would for you to try it out :)
+This is a work in progress and not ready for production use. However if you like tinker with your printers I would love for you to try it out :)
 
 ## Install
 Helm is a web app intended to run on a raspberry pi running [Klipper](https://github.com/Klipper3d/klipper) firmware, and requires the [Moonraker](https://github.com/Arksine/moonraker) api layer be installed.
