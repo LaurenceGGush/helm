@@ -71,29 +71,6 @@ const selectHomed = (status: PrinterStatus) => {
 const homedAtom = selectAtom(statusAtom, selectHomed, equal)
 export const useHomed = () => useAtomValue(homedAtom)
 
-const selectAvailableMacros = (status: PrinterStatus) => {
-	const macros = Object.fromEntries(
-		Object.keys(status)
-			.map((key) => {
-				const splitkey = key.split(" ")
-
-				if (splitkey[0] === "gcode_macro") {
-					return splitkey[1]
-				}
-
-				return ""
-			})
-			.filter((f) => f)
-			.map((macro) => [macro.toLowerCase(), true]),
-	)
-
-	// logger.log("m", macros)
-
-	return macros
-}
-const availableMacrosAtom = selectAtom(statusAtom, selectAvailableMacros, equal)
-export const useAvailableMacros = () => useAtomValue(availableMacrosAtom)
-
 const selectEndstops = (status: PrinterStatus) => {
 	const endstops = Object.keys(status.query_endstops?.last_query || {})
 		.map((key) => {

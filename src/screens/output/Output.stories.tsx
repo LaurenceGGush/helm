@@ -1,6 +1,8 @@
 import { Story } from "@storybook/react/types-6-0"
 
-import Output from "."
+import { homingList } from "../../storybook/mockdata"
+import { UpdateStore } from "../../storybook/mocks"
+import Output from "./Output"
 
 export default {
 	title: "Screens/Output",
@@ -10,3 +12,10 @@ export default {
 export const Default: Story<{ isSelected: boolean }> = (args) => (
 	<Output {...args} />
 )
+Default.decorators = [
+	(Story) => (
+		<UpdateStore objectList={homingList}>
+			<Story />
+		</UpdateStore>
+	),
+]
