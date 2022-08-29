@@ -1,9 +1,17 @@
 # Helm
+![promo](./screenshots/helm-dark.jpg)
 
 A touch user interface for [Klipper](https://github.com/Klipper3d/klipper) based 3d printers.
 
 ## WIP
 This is a work in progress and not ready for production use. However if you like tinker with your printers I would love for you to try it out :)
+
+## Storybook
+Storybook is used in this project to allow development of components in isolation and to avoid the need for a connection to a working printer.
+
+It is also a good way to get a feel for the interface.
+
+[View The Storybook](https://laurenceggush.github.io/helm/)
 
 ## Install
 Helm is a web app intended to run on a raspberry pi running [Klipper](https://github.com/Klipper3d/klipper) firmware, and requires the [Moonraker](https://github.com/Arksine/moonraker) api layer be installed.
@@ -70,16 +78,6 @@ Time to restart the pi and glory in the new: `sudo reboot`
 ![printing](./screenshots/printer-printing-landscape.png)
 
 ![printing](./screenshots/printer-paused.png)
-
-## Storybook
-Storybook is used in this project to allow development of components in isolation and to avoid the need for a connection to a working printer.
-
-It is also a good way to get a feel for the interface.
-
-To run the storybook:
--   Clone the repo
--   install dependencies with `yarn`
--   then start storybook with `yarn storybook`
 
 ## License
 Copyright (c) Laurence Gush
