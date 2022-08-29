@@ -67,11 +67,7 @@ NotReady.decorators = [
 export const Loading = Template.bind({})
 Loading.decorators = [
 	(Story) => (
-		<UpdateStore
-			info={emptyInfo}
-			fluidd={{ fluidd: {} }}
-			status={resetStatus}
-		>
+		<UpdateStore info={emptyInfo} fluidd={{}} status={resetStatus}>
 			<Story />
 		</UpdateStore>
 	),
@@ -90,6 +86,7 @@ NoCamera.decorators = [
 ]
 
 const noLEDsFluidd = {
+	...baseFluidd,
 	uiSettings: { general: { instanceName: "NoLEDs" } },
 }
 export const NoLeds = Template.bind({})

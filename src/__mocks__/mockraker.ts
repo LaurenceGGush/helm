@@ -42,6 +42,11 @@ function Mockraker(respond: MoonrakerResponses, id = "test") {
 			arrayMerge: (_, sourceArray) => sourceArray,
 		})
 
+		if (update.db_item_get?.fluidd?.value) {
+			responses.db_item_get.fluidd.value =
+				update.db_item_get?.fluidd?.value
+		}
+
 		if (update.object_status?.status) {
 			client.send(
 				JSON.stringify({
