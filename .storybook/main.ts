@@ -44,6 +44,14 @@ const config = {
 	refs: {
 		"@chakra-ui/react": { disable: true },
 	},
+	async viteFinal(config, { configType }) {
+		// Prefix path so storybook works in gh pages
+		if (configType === "PRODUCTION") {
+			config.base = "/helm/"
+		}
+
+		return config
+	},
 }
 
 export default config
